@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>라이어 게임 AI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">WORD LIAR GAME</p>
+        <h1>라이어 게임 <span>AI</span></h1>
+        <p class="hero-desc">여럿이 접속해서 단어 라이어를 찾거나, 혼자 AI 참가자들과 연습할 수 있습니다.</p>
+      </div>
+      <div class="mode-tabs" role="tablist">
+        <button class="tab active" id="multiTab" type="button">여럿이 하기</button>
+        <button class="tab" id="soloTab" type="button">혼자 AI랑 하기</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="multiMode" class="mode-section active">
+        <div class="grid two">
+          <section class="card join-card" id="joinCard">
+            <h2>입장하기</h2>
+            <p class="muted">방장은 방을 만들고, 다른 사람은 같은 방 코드로 들어오면 됩니다.</p>
+            <label>
+              닉네임
+              <input id="nicknameInput" type="text" placeholder="예: 김주무관" maxlength="16" />
+            </label>
+            <label>
+              방 코드
+              <input id="roomCodeInput" type="text" placeholder="비워두면 자동 생성" maxlength="12" />
+            </label>
+            <div class="button-row">
+              <button id="createRoomBtn" class="primary" type="button">방 만들기</button>
+              <button id="joinRoomBtn" type="button">방 입장</button>
+            </div>
+            <div class="tip-box">
+              <strong>같은 네트워크 테스트</strong>
+              <p>서버 PC에서 <code>npm start</code> 후, 같은 와이파이 사람은 <code>http://서버IP:3000</code>으로 접속합니다.</p>
+            </div>
+          </section>
+
+          <section class="card room-card hidden" id="roomCard">
+            <div class="room-head">
+              <div>
+                <p class="eyebrow">ROOM</p>
+                <h2 id="roomCodeTitle">-</h2>
+              </div>
+              <button id="copyCodeBtn" type="button">방 코드 복사</button>
+            </div>
+
+            <div class="status-panel">
+              <div>
+                <span class="label">상태</span>
+                <strong id="gameStatus">대기실</strong>
+              </div>
+              <div>
+                <span class="label">라운드</span>
+                <strong id="roundText">0</strong>
+              </div>
+              <div>
+                <span class="label">타이머</span>
+                <strong id="timerText">-</strong>
+              </div>
+            </div>
+
+            <div class="secret-panel" id="secretPanel">
+              <p class="eyebrow">내 정보</p>
+              <h3 id="secretTitle">대기 중</h3>
+              <p id="secretDesc">게임이 시작되면 내 역할과 단어가 표시됩니다.</p>
+            </div>
+
+            <div class="host-controls" id="hostControls">
+              <label>
+                단어 주제
+                <select id="packSelect">
+                  <option value="easy">쉬움</option>
+                  <option value="office">직장/공공기관</option>
+                  <option value="hard">어려움</option>
+                </select>
+              </label>
+              <div class="button-row">
+                <button id="startGameBtn" class="primary" type="button">게임 시작</button>
+                <button id="resetGameBtn" type="button">대기실로</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="grid two room-area hidden" id="multiGameArea">
+          <section class="card">
+            <div class="section-title">
+              <h2>참가자 / 점수</h2>
+              <span id="playerCount" class="pill">0명</span>
+            </div>
+            <div id="playerList" class="player-list"></div>
+          </section>
+
+          <section class="card">
+            <div class="section-title">
+              <h2>진행</h2>
+              <span id="turnBadge" class="pill">대기</span>
+            </div>
+            <div id="hintInputBox" class="action-box hidden">
+              <p>내 차례입니다. 단어를 직접 말하지 말고, 애매한 힌트를 남겨보세요.</p>
+              <input id="hintInput" type="text" placeholder="예: 빨갛다 / 점심에 많이 먹음" maxlength="80" />
+              <button id="submitHintBtn" class="primary" type="button">힌트 제출</button>
+            </div>
+            <div id="voteBox" class="action-box hidden">
+              <p>누가 라이어 같나요?</p>
+              <div id="voteButtons" class="vote-grid"></div>
+            </div>
+            <div id="finalGuessBox" class="action-box hidden">
+              <p>라이어 마지막 기회! 시민들의 힌트를 보고 단어를 맞히면 역전입니다.</p>
+              <input id="finalGuessInput" type="text" placeholder="정답 단어 입력" maxlength="40" />
+              <button id="submitGuessBtn" class="primary" type="button">최종 추측</button>
+            </div>
+            <div id="resultBox" class="result-box hidden"></div>
+          </section>
+        </div>
+
+        <section class="card hidden" id="hintLogCard">
+          <div class="section-title">
+            <h2>힌트 기록</h2>
+            <span class="pill">단어 직접 언급 금지</span>
+          </div>
+          <div id="hintLog" class="hint-log"></div>
+        </section>
+      </section>
+
+      <section id="soloMode" class="mode-section">
+        <div class="grid two">
+          <section class="card">
+            <h2>AI 라이어 게임</h2>
+            <p class="muted">혼자서 AI 참가자 3명과 라이어 게임을 연습합니다. AI API 없이 브라우저에서 바로 작동합니다.</p>
+            <label>
+              내 닉네임
+              <input id="soloNameInput" type="text" placeholder="예: 나" maxlength="16" />
+            </label>
+            <label>
+              단어 주제
+              <select id="soloPackSelect">
+                <option value="easy">쉬움</option>
+                <option value="office">직장/공공기관</option>
+                <option value="hard">어려움</option>
+              </select>
+            </label>
+            <button id="startSoloBtn" class="primary wide" type="button">AI 게임 시작</button>
+            <div class="tip-box">
+              <strong>AI 기능 설명</strong>
+              <p>AI들은 힌트를 만들고, 힌트의 구체성/애매함을 기준으로 라이어를 추리해서 투표합니다.</p>
+            </div>
+          </section>
+
+          <section class="card solo-board">
+            <div class="section-title">
+              <h2>내 역할</h2>
+              <span id="soloPhaseBadge" class="pill">대기</span>
+            </div>
+            <div class="secret-panel solo" id="soloSecretPanel">
+              <h3 id="soloSecretTitle">게임을 시작하세요</h3>
+              <p id="soloSecretDesc">시작하면 시민 또는 라이어 역할이 정해집니다.</p>
+            </div>
+            <div id="soloUserHintBox" class="action-box hidden">
+              <p>내 힌트를 입력하세요. 라이어라면 눈치껏 그럴듯하게 말해야 합니다.</p>
+              <input id="soloHintInput" type="text" placeholder="내 힌트 입력" maxlength="80" />
+              <button id="soloSubmitHintBtn" class="primary" type="button">힌트 제출</button>
+            </div>
+            <div id="soloVoteBox" class="action-box hidden">
+              <p>AI들의 힌트를 보고 라이어를 선택하세요.</p>
+              <div id="soloVoteButtons" class="vote-grid"></div>
+            </div>
+            <div id="soloFinalGuessBox" class="action-box hidden">
+              <p>당신이 라이어로 지목되었습니다. 마지막으로 단어를 맞히면 승리합니다.</p>
+              <input id="soloFinalGuessInput" type="text" placeholder="정답 단어 입력" maxlength="40" />
+              <button id="soloSubmitGuessBtn" class="primary" type="button">최종 추측</button>
+            </div>
+            <div id="soloResultBox" class="result-box hidden"></div>
+          </section>
+        </div>
+
+        <section class="card hidden" id="soloLogCard">
+          <div class="section-title">
+            <h2>AI 힌트 / 추리 로그</h2>
+            <span class="pill">혼자하기</span>
+          </div>
+          <div id="soloLog" class="hint-log"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
